@@ -1,0 +1,29 @@
+* { margin: 0; padding: 0; }
+
+body {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: sans-serif;
+}
+
+p, h1 {
+  margin: 8px 0 8px 0;
+}
+
+.goal {
+}
+
+.squares {
+}
+
+.sq {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  margin-left: 1px;
+  padding: 0;
+}
+
+.sq-1 { background: green; }
+.sq-2 { background: red; }
+.sq-3 { background: gray; }
