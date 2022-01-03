@@ -1,9 +1,8 @@
-from entries import entries
-from projects import projects
-
 from pydantic import BaseModel
 from typing import List, Optional
 from pendulum.datetime import DateTime
+
+import json
 
 class Project(BaseModel):
     name: str
@@ -21,6 +20,17 @@ class Entry(BaseModel):
     duration: int
     id: int
     tags: List[str]
+
+
+
+def _read_ndjson(path: str) -> List[dict]:
+    with open(path) as f:
+        lines = f.read().strip().split('\n')
+    return [json.loads(line) for line in lines]
+
+
+entries = _read_ndjson('entries.json')
+projects = _read_ndjson('projects.json')
 
 
 projects = [Project(**p['project']) for p in projects]
