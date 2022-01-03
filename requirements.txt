@@ -1,0 +1,5 @@
+pydantic
+dominate
+togglCli
+pendulum
+
