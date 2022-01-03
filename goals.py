@@ -11,7 +11,7 @@ from collections import defaultdict
 from enum import IntEnum
 from typing import Callable, List, Optional, Tuple, Dict
 from pydantic import BaseModel
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 import dominate.tags as t
 
 Day = List[Entry]
@@ -45,7 +45,7 @@ for entry in entries:
 class GoalResultEnum(IntEnum):
     SUCCESS = 1
     FAILURE = 2
-    NA = 3
+    NA = 3 # TODO: Make N/A only when it was before I set the goal
 
 
 class GoalResult(BaseModel):
@@ -67,35 +67,44 @@ def _get_sleep_entry(day: Day) -> Optional[Entry]:
 
 
 goals: List[Goal] = []
-def goal(fn: Goal):
-    goals.append(fn)
-    char = {GoalResultEnum.NA: 'N', GoalResultEnum.FAILURE: 'F', GoalResultEnum.SUCCESS: 'S'}
+def goal(goal_start_date: date = start_date):
+    def _goal(fn: Goal):
+        goals.append(fn)
+        char = {GoalResultEnum.NA: 'N', GoalResultEnum.FAILURE: 'F', GoalResultEnum.SUCCESS: 'S'}
 
-    results = [(date, fn(day)) for date, day in days.items()]
+        results = []
+        for date, day in days.items():
+            gr = GoalResult(result=GoalResultEnum.NA, hover=f'goal starts {goal_start_date}') \
+                if date < goal_start_date \
+                else fn(day)
 
-
-    text = ''
-    text += fn.__doc__ + '\n'
-    for _, result in results:
-        text += char[result.result]
-    fn.text = text
-
-    name = fn.__name__.replace('_', ' ').title()
-    html = t.div(
-        t.h1(name),
-        t.p(fn.__doc__),
-        t.div(
-            *[t.div(title=f'{date}: {r.hover}', _class=f'sq sq-{r.result}') for date, r in results],
-            _class='squares',
-        ),
-        _class='goal',
-    ).render()
-
-    fn.html = html
-    return fn
+            results.append((date, gr))
 
 
-@goal
+        text = ''
+        text += fn.__doc__ + '\n'
+        for _, result in results:
+            text += char[result.result]
+        fn.text = text
+
+        name = fn.__name__.replace('_', ' ').title()
+        html = t.div(
+            t.h1(name),
+            t.p(fn.__doc__),
+            t.div(
+                *[t.div(title=f'{date}: {r.hover}', _class=f'sq sq-{r.result}') for date, r in results],
+                _class='squares',
+            ),
+            _class='goal',
+        ).render()
+
+        fn.html = html
+        return fn
+
+    return _goal
+
+
+@goal(goal_start_date=datetime(2022, 1, 1).date())
 def bedtime(day: Day) -> GoalResult:
     "Be in bed by 11pm"
     if entry := _get_sleep_entry(day):
@@ -109,7 +118,7 @@ def bedtime(day: Day) -> GoalResult:
     return GoalResult(result=GoalResultEnum.NA, hover='could not find bedtime')
 
 
-@goal
+@goal()
 def anki_time(day: Day) -> GoalResult:
     "Do anki reviews every day"
     # NOTE: This is an imperfect goal as it doesn't check that I did all my reviews, it's
@@ -120,12 +129,22 @@ def anki_time(day: Day) -> GoalResult:
     return GoalResult(result=bool_goal_result(minutes>0), hover=f'{minutes:.0f}m anki')
 
 
-@goal
+@goal()
+def coding_time(day: Day) -> GoalResult:
+    "Do 4h coding a day"
+    hours = sum(
+        entry.duration for entry in filter(by_project('coding'), day)
+    ) / 60 / 60
+    return GoalResult(result=bool_goal_result(hours > 4), hover=f'{hours:.1f}h coding')
+
+
+@goal()
 def science_time(day: Day) -> GoalResult:
     "Do 2h science a day"
     seconds = sum(entry.duration for entry in filter(by_project('science'), day))
     hours = seconds / 60 / 60
     return GoalResult(result=bool_goal_result(hours > 2), hover=f'{hours:.1f}h science')
+
 
 
 html = '<html lang="en">\n'
