@@ -33,14 +33,14 @@ entries = _read_ndjson('entries.ndjson')
 projects = _read_ndjson('projects.ndjson')
 
 
-projects = [Project(**p['project']) for p in projects]
+projects = [Project(**p['project']) for p in reversed(projects)]
 project_by_id = {project.id: project for project in projects}
 entries = [
     Entry(
         **e,
         project=project_by_id.get(e['pid'])
     )
-    for e in entries
+    for e in reversed(entries)
     # a few records (12 in my case) are broken and have "stop": null. this works around that
     if e['stop']
 ]
