@@ -20,11 +20,19 @@ Days = Dict[datetime, Day]
 
 # used in filter
 
-def by_project(name: str):
-    return lambda e: e.project and e.project.name.lower() == name
+BoolFn = Callable[[Entry], bool]
 
-def by_description(description: str):
+def by_project(name: str) -> BoolFn:
+    return lambda e: bool(e.project and e.project.name.lower() == name)
+
+def by_description(description: str) -> BoolFn:
     return lambda e: e.description == description
+
+def by_any(fns: List[BoolFn]) -> BoolFn:
+    return lambda e: any(fn(e) for fn in fns)
+
+def by_any_project(names: List[str]) -> BoolFn:
+    return by_any([by_project(name) for name in names])
 
 
 days: Days = {}
@@ -119,6 +127,17 @@ def anki_time(day: Day) -> GoalResult:
     minutes = seconds / 60
     return GoalResult(result=bool_goal_result(minutes>0), hover=f'{minutes:.0f}m anki')
 
+
+WORK_PROJECTS = [
+    "book-reading", "coding", "goals", "journal",
+    "languages", "math", "science", "textbook-problems",
+]
+
+@goal
+def work_time(day: Day) -> GoalResult:
+    "Work 8h/day"
+    hours = sum(e.duration for e in filter(by_any_project(WORK_PROJECTS), day)) / 60 / 60
+    return GoalResult(result=bool_goal_result(hours>8), hover=f'{hours:.1f}h work')
 
 @goal
 def science_time(day: Day) -> GoalResult:
