@@ -8,14 +8,14 @@ for day in days:
 """
 from data import entries, projects, Entry
 from collections import defaultdict
-import pendulum
 from enum import IntEnum
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Dict
 from pydantic import BaseModel
+from datetime import timedelta, datetime
 import dominate.tags as t
 
 Day = List[Entry]
-Days = List[Day]
+Days = Dict[datetime, Day]
 
 
 # used in filter
@@ -27,15 +27,20 @@ def by_description(description: str):
     return lambda e: e.description == description
 
 
-start_date = entries[0].start.date()
-days_dict = defaultdict(list)
-for entry in entries:
-    days_since_start = (entry.start.date()-start_date).days
-    days_dict[days_since_start].append(entry)
+days: Days = {}
 
-# make into list in order to handle days with zero data
-days: Days = [days_dict[d] for d in range(max(days_dict.keys()))]
-del days_dict
+# fill days_dict with empty lists, this is needed since I might skip
+# toggl for a day, in which case we want an empty list
+start_date = entries[0].start.date()
+end_date = entries[-1].start.date()
+days_difference = (end_date - start_date).days
+for date in (start_date + timedelta(n) for n in range(days_difference+1)):
+    days[date] = []
+
+# populate from entries
+for entry in entries:
+    days[entry.start.date()].append(entry)
+
 
 class GoalResultEnum(IntEnum):
     SUCCESS = 1
@@ -66,12 +71,12 @@ def goal(fn: Goal):
     goals.append(fn)
     char = {GoalResultEnum.NA: 'N', GoalResultEnum.FAILURE: 'F', GoalResultEnum.SUCCESS: 'S'}
 
-    results = [fn(day) for day in days]
+    results = [(date, fn(day)) for date, day in days.items()]
 
 
     text = ''
     text += fn.__doc__ + '\n'
-    for result in results:
+    for _, result in results:
         text += char[result.result]
     fn.text = text
 
@@ -80,7 +85,7 @@ def goal(fn: Goal):
         t.h1(name),
         t.p(fn.__doc__),
         t.div(
-            *[t.div(title=r.hover, _class=f'sq sq-{r.result}') for r in results],
+            *[t.div(title=f'{date}: {r.hover}', _class=f'sq sq-{r.result}') for date, r in results],
             _class='squares',
         ),
         _class='goal',
