@@ -1,5 +1,7 @@
 ## Track
 
+![screenshot](screenshot.png)
+
 Something I use to track my goals, don't expect it to work for you as it's highly custom.
 Feel free to take inspiration though
 
