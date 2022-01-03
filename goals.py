@@ -110,14 +110,6 @@ def bedtime(day: Day) -> GoalResult:
 
 
 @goal
-def science_time(day: Day) -> GoalResult:
-    "Do 2h science a day"
-    seconds = sum(entry.duration for entry in filter(by_project('science'), day))
-    hours = seconds / 60 / 60
-    return GoalResult(result=bool_goal_result(hours > 2), hover=f'{hours:.1f}h science')
-
-
-@goal
 def anki_time(day: Day) -> GoalResult:
     "Do anki reviews every day"
     # NOTE: This is an imperfect goal as it doesn't check that I did all my reviews, it's
@@ -127,6 +119,13 @@ def anki_time(day: Day) -> GoalResult:
     minutes = seconds / 60
     return GoalResult(result=bool_goal_result(minutes>0), hover=f'{minutes:.0f}m anki')
 
+
+@goal
+def science_time(day: Day) -> GoalResult:
+    "Do 2h science a day"
+    seconds = sum(entry.duration for entry in filter(by_project('science'), day))
+    hours = seconds / 60 / 60
+    return GoalResult(result=bool_goal_result(hours > 2), hover=f'{hours:.1f}h science')
 
 
 html = '<html lang="en">\n'
