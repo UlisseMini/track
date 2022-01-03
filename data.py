@@ -29,8 +29,8 @@ def _read_ndjson(path: str) -> List[dict]:
     return [json.loads(line) for line in lines]
 
 
-entries = _read_ndjson('entries.json')
-projects = _read_ndjson('projects.json')
+entries = _read_ndjson('entries.ndjson')
+projects = _read_ndjson('projects.ndjson')
 
 
 projects = [Project(**p['project']) for p in projects]
