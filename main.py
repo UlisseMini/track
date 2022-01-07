@@ -41,7 +41,6 @@ import pendulum
 import json
 from typing import List, Optional
 from pathlib import Path
-import data
 from sqlalchemy import select
 from sqlalchemy.orm import class_mapper
 
