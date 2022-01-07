@@ -7,7 +7,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
-from sqlalchemy import Column, String, Integer, BigInteger, Boolean, DateTime, ARRAY, ForeignKey
+from sqlalchemy import Column, String, Integer, BigInteger, Boolean, TIMESTAMP, ARRAY, ForeignKey
 from sqlalchemy.orm import relationship
 
 class Entry(Base):
@@ -16,8 +16,8 @@ class Entry(Base):
     id = Column(BigInteger, primary_key=True)
     pid = Column(BigInteger, ForeignKey('toggl_projects.id'), index=True)
     description = Column(String)
-    start = Column(DateTime)
-    stop = Column(DateTime)
+    start = Column(TIMESTAMP(timezone=True))
+    stop = Column(TIMESTAMP(timezone=True))
     duration = Column(Integer)
     tags = Column(ARRAY(String))
     # TODO
@@ -46,15 +46,28 @@ from sqlalchemy.orm import class_mapper
 
 def latest_entry(db):
     row = db.execute(select(Entry).order_by(Entry.start.desc())).first()
-    return row[0]
+    if row is not None:
+        entry = row[0]
+        return entry
 
 
-def raw_to_model(raw, model):
-    return model(**{
-        k: v for k,v in raw.to_dict().items()
-        if k in class_mapper(model).attrs.keys()
-    })
+def raw_to_project(project):
+    return Project(
+        id = project.id, name = project.name, wid = project.wid,
+        active = project.active, hex_color = project.hex_color,
+    )
 
+
+def raw_to_entry(entry, project_ids: set) -> Entry:
+    return Entry(
+        description = entry.description,
+        start = entry.start,
+        stop = entry.stop,
+        duration = entry.duration,
+        id = entry.id,
+        pid = entry.pid if entry.pid in project_ids else None,
+        tags = list(entry.tags),
+    )
 
 def main(db: Session):
     # 1. Create tables if needed
@@ -64,8 +77,10 @@ def main(db: Session):
 
     # 2. Update projects
     print('Getting projects... ', end='', flush=True)
+    project_ids = set()
     for project in models.Project.objects.all():
-        db_project = raw_to_model(project, Project)
+        project_ids.add(project.id)
+        db_project = raw_to_project(project)
         db.merge(db_project)
 
     db.commit()
@@ -75,19 +90,19 @@ def main(db: Session):
     latest = latest_entry(db)
 
     # max toggl api is 1 year ago, so if we have no latest we fetch data from start
-    start = latest.start if latest else pendulum.now().subtract(years=1)
     now = pendulum.now()
-    # TODO: Progressbar dates
+    start = latest.start if latest else now.subtract(years=1)
     print(f'Getting entries from {start} to now...')
-    num = 1
-    for entry in models.TimeEntry.objects.all_from_reports(start=start, stop=now): # type: ignore
-        db_entry = raw_to_model(entry, Entry)
-        print(f'Updating entries... added {num}', end='\r', flush=True)
-        num += 1
-        db.merge(db_entry)
-        db.commit()
 
-    print(' done')
+    entries = models.TimeEntry.objects.all_from_reports(start=start, stop=now) # type: ignore
+    for n, entry in enumerate(entries):
+        db_entry = raw_to_entry(entry, project_ids)
+        print(f'Entry {n} days left {(db_entry.start-start).in_days()}')
+        db.merge(db_entry)
+
+    print(f'Commiting entries...')
+    db.commit()
+    print('done')
 
 
 if __name__ == '__main__':
