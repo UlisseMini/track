@@ -2,4 +2,5 @@ pydantic
 dominate
 togglCli
 pendulum
-
+sqlalchemy
+psycopg2
