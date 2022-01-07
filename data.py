@@ -32,14 +32,16 @@ def _read_ndjson(path: str) -> List[dict]:
 entries = _read_ndjson('entries.ndjson')
 projects = _read_ndjson('projects.ndjson')
 
+def raw_to_entry(e: dict) -> Entry:
+    return Entry(**e, project=project_by_id.get(e['pid']))
 
-projects = [Project(**p['project']) for p in reversed(projects)]
+def raw_to_project(p: dict) -> Project:
+    return Project(**p['project'])
+
+projects = [raw_to_project(p) for p in reversed(projects)]
 project_by_id = {project.id: project for project in projects}
 entries = [
-    Entry(
-        **e,
-        project=project_by_id.get(e['pid'])
-    )
+    raw_to_entry(e)
     for e in reversed(entries)
     # a few records (12 in my case) are broken and have "stop": null. this works around that
     if e['stop']
