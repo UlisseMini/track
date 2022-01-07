@@ -28,6 +28,9 @@ def by_project(name: str) -> BoolFn:
 def by_description(description: str) -> BoolFn:
     return lambda e: e.description == description
 
+def in_description(text: str) -> BoolFn:
+    return lambda e: text in e.description
+
 def by_any(fns: List[BoolFn]) -> BoolFn:
     return lambda e: any(fn(e) for fn in fns)
 
@@ -138,6 +141,12 @@ def work_time(day: Day) -> GoalResult:
     "Work 8h/day"
     hours = sum(e.duration for e in filter(by_any_project(WORK_PROJECTS), day)) / 60 / 60
     return GoalResult(result=bool_goal_result(hours>8), hover=f'{hours:.1f}h work')
+
+@goal
+def texify_abbot(day: Day) -> GoalResult:
+    "Spend some time texifying solutions to abbott's understanding analysis"
+    minutes = sum(e.duration for e in filter(in_description('analysis-writing'), day)) / 60
+    return GoalResult(result=bool_goal_result(minutes>0), hover=f'{minutes:.0f}m texifying')
 
 @goal
 def science_time(day: Day) -> GoalResult:
