@@ -8,6 +8,9 @@ authors = ["Ulisse Mini <ulisse.mini@gmail.com>"]
 python = "^3.9"
 fastapi = "^0.71.0"
 uvicorn = {extras = ["standard"], version = "^0.17.0"}
+dominate = "^2.6.0"
+python-multipart = "^0.0.5"
+PyJWT = "^2.3.0"
 
 [tool.poetry.dev-dependencies]
 
